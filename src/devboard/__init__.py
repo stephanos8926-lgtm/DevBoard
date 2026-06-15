@@ -270,12 +270,15 @@ class DevBoard:
 
     def _get_task_status(self, task_id: str) -> str:
         """Determine task status from file location."""
-        if (self.job_end_dir / task_id).exists():
-            return "x"
-        if (self.job_start_dir / task_id).exists():
-            return "~"
-        if (self.in_progress_dir / task_id).exists():
-            return "~"
+        for f in self.job_end_dir.iterdir():
+            if f.name.startswith(task_id):
+                return "x"
+        for f in self.job_start_dir.iterdir():
+            if f.name.startswith(task_id):
+                return "~"
+        for f in self.in_progress_dir.iterdir():
+            if f.name.startswith(task_id):
+                return "~"
         return " "
 
     def get_stats(self) -> BoardStats:
@@ -311,20 +314,29 @@ class DevBoard:
 
     def claim_task(self, task_id: str, agent: str) -> Optional[Path]:
         """Claim a task for an agent. Returns path or None if unavailable."""
+        # Check if already claimed/completed
+        actual_status = self._get_task_status(task_id)
+        if actual_status != " ":
+            return None
+
         # Find the task file
         task_file = self._find_task_file(task_id)
         if not task_file:
             return None
 
         task = Task.from_file(task_file)
-        if not task.is_available:
-            return None
 
         # Update task
         task.status = "~"
         task.agent = agent
+
+        # Write to InProgress
         task_path = self.in_progress_dir / f"{task_id}_{task.name.replace(' ', '-')}"
         task_path.write_text(task.to_file_content(), encoding="utf-8")
+
+        # Also update the original in AllPhases so re-reads show correct status
+        if task_file.parent.parent == self.all_phases_dir:
+            task_file.write_text(task.to_file_content(), encoding="utf-8")
 
         self._update_tasks_file(task)
         self._update_master()
