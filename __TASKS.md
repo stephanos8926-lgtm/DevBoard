@@ -11,11 +11,7 @@ _If a task is marked `[~]`, another agent is working on it. Do NOT start it._
 
 | Status | Task ID | Description | Agent | Project |
 |--------|---------|-------------|-------|---------|
-| [~] | DB-0002 | Create task template (generic, project-agnostic) | OWL | DevBoard |
-| [~] | DB-0003 | Create MASTER.SCHEDULE.md | OWL | DevBoard |
-| [ ] | DB-0004 | Strip ForgeAgent context, create sample tasks | — | DevBoard |
-| [ ] | DB-0005 | Add agent coordination protocol to STRUCTURE.md | — | DevBoard |
-| [ ] | DB-0006 | Initialize git repo + commit | — | DevBoard |
+| [~] | DB-0006 | Initialize git repo + commit | OWL | DevBoard |
 
 ---
 
@@ -24,7 +20,7 @@ _Tasks currently being worked on. Only one agent per task._
 
 | Status | Task ID | Description | Agent | Project |
 |--------|---------|-------------|-------|---------|
-| [~] | DB-0003 | Create MASTER.SCHEDULE.md | OWL | DevBoard |
+| [~] | DB-0006 | Initialize git repo + commit | OWL | DevBoard |
 
 ---
 
@@ -34,7 +30,10 @@ _Finished tasks moved to JobEnd/_
 | Status | Task ID | Description | Agent | Project |
 |--------|---------|-------------|-------|---------|
 | [x] | DB-0001 | Set up DevBoard folder structure | Lucien | DevBoard |
-| [x] | DB-0002 | Create task template (generic, project-agnostic) | Lucien | DevBoard |
+| [x] | DB-0002 | Create task template | Lucien | DevBoard |
+| [x] | DB-0003 | Create MASTER.SCHEDULE.md | OWL | DevBoard |
+| [x] | DB-0004 | Strip ForgeAgent context, create sample tasks | OWL | DevBoard |
+| [x] | DB-0005 | Add agent coordination protocol to STRUCTURE.md | OWL | DevBoard |
 
 ---
 

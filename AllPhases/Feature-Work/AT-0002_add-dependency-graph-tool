@@ -1,0 +1,35 @@
+AT-0002
+Add Dependency Graph Tool
+Feature-Work
+MEDIUM
+
+Build a `dependency_graph` MCP tool for ast-tools that generates a full module
+dependency graph for a Python project. Shows imports, exports, and circular
+dependencies. Complements the existing `module_imports` tool (fan-in/fan-out)
+with a project-wide view.
+
+## AGENT
+Unassigned
+
+## DEPENDENCIES
+- AT-0001 (module_imports tool — completed)
+
+## PROJECT
+ast-tools
+
+## FILES TO MODIFY
+- ~/ast-tools/src/server.py (or wherever MCP tools are defined)
+
+## FILES TO CREATE
+- ~/ast-tools/src/tools/dependency_graph.py
+
+## ACCEPTANCE CRITERIA
+- [ ] New `dependency_graph` MCP tool registered
+- [ ] Returns project-wide import graph (adjacency list format)
+- [ ] Detects and flags circular dependencies
+- [ ] Handles src/ layout and namespace packages
+- [ ] All existing ast-tools tests still pass
+
+## NOTES
+Leverage the AST parsing infrastructure already built for `module_imports`.
+The tool should walk all .py files and build a complete import map.

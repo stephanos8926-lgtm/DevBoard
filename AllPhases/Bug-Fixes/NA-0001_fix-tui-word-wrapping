@@ -1,0 +1,31 @@
+NA-0001
+Fix TUI Word Wrapping
+Bug-Fixes
+HIGH
+
+The TUI chat view does not wrap long lines correctly. Text overflows horizontally
+instead of wrapping within the widget bounds. This makes long responses unreadable.
+
+## AGENT
+Unassigned
+
+## DEPENDENCIES
+- (none)
+
+## PROJECT
+NexusAgent
+
+## FILES TO MODIFY
+- src/nexusagent/interfaces/tui.py
+
+## FILES TO CREATE
+- (none)
+
+## ACCEPTANCE CRITERIA
+- [ ] Long lines wrap within the chat widget bounds
+- [ ] No horizontal scrollbar appears in normal use
+- [ ] Existing tests still pass (599/599)
+
+## NOTES
+The RichLog widget has wrap=True but it's not working. Likely a CSS/layout issue
+with the Container hierarchy. Check the widget's width calculation.

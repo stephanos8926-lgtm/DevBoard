@@ -1,0 +1,32 @@
+NA-0002
+Fix Tool Call Display
+Bug-Fixes
+HIGH
+
+Tool calls in the TUI are displayed as raw JSON instead of formatted output.
+Users see `{"tool": "read_file", "path": "..."}` instead of a readable summary.
+
+## AGENT
+Unassigned
+
+## DEPENDENCIES
+- (none)
+
+## PROJECT
+NexusAgent
+
+## FILES TO MODIFY
+- src/nexusagent/widgets/messages/ (ToolCallMessage or equivalent)
+- src/nexusagent/interfaces/tui_formatters.py
+
+## FILES TO CREATE
+- (none)
+
+## ACCEPTANCE CRITERIA
+- [ ] Tool calls show formatted output (tool name + key params, not raw JSON)
+- [ ] Tool results are indented/collapsed for readability
+- [ ] Existing tests still pass
+
+## NOTES
+The data is there — it's just not being formatted before display. Check how
+ToolCallMessage renders its content.
