@@ -11,7 +11,7 @@ _If a task is marked `[~]`, another agent is working on it. Do NOT start it._
 
 | Status | Task ID | Description | Agent | Project |
 |--------|---------|-------------|-------|---------|
-| [~] | DB-0006 | Initialize git repo + commit | OWL | DevBoard |
+| (all complete) | — | — | — | — |
 
 ---
 
@@ -20,7 +20,7 @@ _Tasks currently being worked on. Only one agent per task._
 
 | Status | Task ID | Description | Agent | Project |
 |--------|---------|-------------|-------|---------|
-| [~] | DB-0006 | Initialize git repo + commit | OWL | DevBoard |
+| (none) | — | — | — | — |
 
 ---
 
@@ -34,6 +34,7 @@ _Finished tasks moved to JobEnd/_
 | [x] | DB-0003 | Create MASTER.SCHEDULE.md | OWL | DevBoard |
 | [x] | DB-0004 | Strip ForgeAgent context, create sample tasks | OWL | DevBoard |
 | [x] | DB-0005 | Add agent coordination protocol to STRUCTURE.md | OWL | DevBoard |
+| [x] | DB-0006 | Initialize git repo + commit | Lucien+OWL | DevBoard |
 
 ---
 
