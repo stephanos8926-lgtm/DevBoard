@@ -1,0 +1,9 @@
+{
+  "src/devboard/__init__.py": [],
+  "src/devboard/cli.py": [
+    "src/devboard/__init__.py"
+  ],
+  "tests/test_devboard.py": [
+    "src/devboard/__init__.py"
+  ]
+}

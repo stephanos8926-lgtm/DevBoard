@@ -337,10 +337,47 @@ class DevBoard:
     # ── Config ──
 
     def load_config(self) -> dict:
-        """Load board configuration."""
+        """Load board configuration with validation."""
         if not self.config_file.exists():
             return {}
-        return yaml.safe_load(self.config_file.read_text()) or {}
+        config = yaml.safe_load(self.config_file.read_text()) or {}
+        # Validate required keys
+        required = ["statuses", "priorities"]
+        for key in required:
+            if key not in config:
+                logger.warning("Config missing required key '%s', using defaults", key)
+        return config
+
+    def validate_config(self) -> list[str]:
+        """Validate the current config. Returns list of issues."""
+        config = self.load_config()
+        issues = []
+        if not config:
+            issues.append("config.yml is empty or missing")
+            return issues
+        statuses = config.get("statuses", [])
+        if not statuses:
+            issues.append("statuses is empty")
+        wip_limits = config.get("wip_limits", {})
+        for status, limit in wip_limits.items():
+            if status not in statuses:
+                issues.append(f"WIP limit for '{status}' references non-existent status")
+            if not isinstance(limit, int) or limit < 0:
+                issues.append(f"WIP limit for '{status}' must be a non-negative integer")
+        priorities = config.get("priorities", [])
+        if not priorities:
+            issues.append("priorities is empty")
+        for cos_name, cos_cfg in CLASS_OF_SERVICE.items():
+            if "sla_hours" in cos_cfg and cos_cfg["sla_hours"] is not None:
+                if not isinstance(cos_cfg["sla_hours"], (int, float)) or cos_cfg["sla_hours"] <= 0:
+                    issues.append(f"Class of service '{cos_name}' has invalid sla_hours")
+        return issues
+
+    def validate_status(self, status: str) -> bool:
+        """Check if a status is valid per config."""
+        config = self.load_config()
+        statuses = config.get("statuses", ["backlog", "in-progress", "review", "done"])
+        return status in statuses
 
     def save_config(self, config: dict) -> None:
         """Save board configuration."""
@@ -483,6 +520,29 @@ class DevBoard:
                 return False
         return True
 
+    def _detect_cycle(self, task_id: str, visited: set[str] | None = None) -> bool:
+        """Detect if adding/keeping a dependency would create a cycle. Returns True if cycle found."""
+        if visited is None:
+            visited = set()
+        if task_id in visited:
+            return True
+        visited.add(task_id)
+        task = self.find_task(task_id)
+        if not task:
+            return False
+        for dep_id in task.dependencies:
+            if self._detect_cycle(dep_id, visited.copy()):
+                return True
+        return False
+
+    def check_dependency_cycles(self) -> list[str]:
+        """Check all tasks for dependency cycles. Returns list of task IDs with cycles."""
+        cycles = []
+        for task in self.load_tasks():
+            if self._detect_cycle(task.task_id):
+                cycles.append(task.task_id)
+        return cycles
+
     def _auto_unblock(self, completed_task_id: str) -> None:
         """Auto-unblock tasks whose dependencies are now satisfied."""
         for task in self.load_tasks():
@@ -496,9 +556,14 @@ class DevBoard:
     # ── Move ──
 
     def move_task(self, task_id: str, new_status: str, agent: str = "") -> bool:
-        """Move a task to a new status."""
+        """Move a task to a new status. Validates status against config."""
         task = self.find_task(task_id)
         if not task:
+            return False
+
+        # Validate the new status
+        if not self.validate_status(new_status):
+            logger.warning("Invalid status '%s' — not in configured statuses", new_status)
             return False
 
         old_status = task.status

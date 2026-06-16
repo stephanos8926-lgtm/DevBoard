@@ -1,0 +1,112 @@
+{
+  "Task": {
+    "file": "src/devboard/__init__.py",
+    "line": 76,
+    "type": "class"
+  },
+  "BoardStats": {
+    "file": "src/devboard/__init__.py",
+    "line": 222,
+    "type": "class"
+  },
+  "FlowStats": {
+    "file": "src/devboard/__init__.py",
+    "line": 237,
+    "type": "class"
+  },
+  "ActivityEvent": {
+    "file": "src/devboard/__init__.py",
+    "line": 260,
+    "type": "class"
+  },
+  "DevBoard": {
+    "file": "src/devboard/__init__.py",
+    "line": 284,
+    "type": "class"
+  },
+  "get_board": {
+    "file": "src/devboard/cli.py",
+    "line": 23,
+    "type": "function"
+  },
+  "main": {
+    "file": "src/devboard/cli.py",
+    "line": 37,
+    "type": "function"
+  },
+  "init": {
+    "file": "src/devboard/cli.py",
+    "line": 47,
+    "type": "function"
+  },
+  "cmd_status": {
+    "file": "src/devboard/cli.py",
+    "line": 62,
+    "type": "function"
+  },
+  "add": {
+    "file": "src/devboard/cli.py",
+    "line": 134,
+    "type": "function"
+  },
+  "list_tasks": {
+    "file": "src/devboard/cli.py",
+    "line": 166,
+    "type": "function"
+  },
+  "show": {
+    "file": "src/devboard/cli.py",
+    "line": 231,
+    "type": "function"
+  },
+  "pick": {
+    "file": "src/devboard/cli.py",
+    "line": 279,
+    "type": "function"
+  },
+  "claim": {
+    "file": "src/devboard/cli.py",
+    "line": 308,
+    "type": "function"
+  },
+  "complete": {
+    "file": "src/devboard/cli.py",
+    "line": 328,
+    "type": "function"
+  },
+  "move": {
+    "file": "src/devboard/cli.py",
+    "line": 349,
+    "type": "function"
+  },
+  "log": {
+    "file": "src/devboard/cli.py",
+    "line": 369,
+    "type": "function"
+  },
+  "agent_name": {
+    "file": "src/devboard/cli.py",
+    "line": 393,
+    "type": "function"
+  },
+  "board_summary": {
+    "file": "src/devboard/cli.py",
+    "line": 406,
+    "type": "function"
+  },
+  "TestTask": {
+    "file": "tests/test_devboard.py",
+    "line": 19,
+    "type": "class"
+  },
+  "TestDevBoard": {
+    "file": "tests/test_devboard.py",
+    "line": 101,
+    "type": "class"
+  },
+  "tmp_board": {
+    "file": "tests/test_devboard.py",
+    "line": 12,
+    "type": "function"
+  }
+}

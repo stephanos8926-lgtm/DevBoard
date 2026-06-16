@@ -215,4 +215,127 @@ class TestDevBoard:
         assert result is not None
 
 
+class TestNewFeatures:
+    """Tests for v1.1.0 new features."""
+
+    def test_validate_config_valid(self, tmp_board):
+        """Valid config should return no issues."""
+        issues = tmp_board.validate_config()
+        assert issues == []
+
+    def test_validate_config_empty(self, tmp_path):
+        """Empty config should return issues."""
+        board = DevBoard(tmp_path / "empty_board")
+        board.tasks_dir.mkdir(parents=True, exist_ok=True)
+        board.config_file.write_text("", encoding="utf-8")
+        issues = board.validate_config()
+        assert len(issues) > 0
+
+    def test_validate_status_valid(self, tmp_board):
+        """Valid statuses should return True."""
+        assert tmp_board.validate_status("backlog") is True
+        assert tmp_board.validate_status("in-progress") is True
+        assert tmp_board.validate_status("review") is True
+        assert tmp_board.validate_status("done") is True
+
+    def test_validate_status_invalid(self, tmp_board):
+        """Invalid status should return False."""
+        assert tmp_board.validate_status("nonexistent") is False
+
+    def test_move_task_invalid_status(self, tmp_board):
+        """Moving to an invalid status should fail."""
+        tmp_board.add_task(name="Test Task")
+        result = tmp_board.move_task("1", "nonexistent")
+        assert result is False
+
+    def test_dependency_cycle_detection(self, tmp_board):
+        """Should detect circular dependencies."""
+        tmp_board.add_task(name="Task A")
+        tmp_board.add_task(name="Task B", dependencies=["1"])
+        # Manually create a cycle: A depends on B, B depends on A
+        task_a = tmp_board.find_task("1")
+        task_a.dependencies = ["2"]
+        tmp_board.save_task(task_a)
+
+        cycles = tmp_board.check_dependency_cycles()
+        assert len(cycles) > 0
+
+    def test_no_cycle_for_linear_deps(self, tmp_board):
+        """Linear dependencies should not be flagged as cycles."""
+        tmp_board.add_task(name="Task A")
+        tmp_board.add_task(name="Task B", dependencies=["1"])
+        tmp_board.add_task(name="Task C", dependencies=["2"])
+
+        cycles = tmp_board.check_dependency_cycles()
+        assert cycles == []
+
+    def test_auto_unblock_on_complete(self, tmp_board):
+        """Completing a task should auto-unblock dependent tasks."""
+        tmp_board.add_task(name="Task A")
+        tmp_board.add_task(name="Task B", dependencies=["1"])
+        # Manually set B to blocked
+        task_b = tmp_board.find_task("2")
+        task_b.status = "blocked"
+        tmp_board.save_task(task_b)
+
+        # Complete A
+        tmp_board.claim_task("1", "agent-1")
+        tmp_board.complete_task("1", "agent-1")
+
+        # B should now be unblocked (backlog)
+        task_b = tmp_board.find_task("2")
+        assert task_b.status == "backlog"
+
+    def test_init_with_custom_statuses(self, tmp_path):
+        """Init should accept custom statuses."""
+        board = DevBoard(tmp_path / "custom_board")
+        board.tasks_dir.mkdir(parents=True, exist_ok=True)
+        config = {
+            "version": 1,
+            "board": {"name": "Custom"},
+            "statuses": ["open", "doing", "review", "closed"],
+            "priorities": ["low", "high"],
+            "wip_limits": {"doing": 5},
+            "claim_timeout": "2h",
+            "defaults": {"status": "open", "priority": "low"},
+            "next_id": 1,
+        }
+        import yaml
+        board.config_file.write_text(yaml.dump(config), encoding="utf-8")
+        assert board.validate_status("open") is True
+        assert board.validate_status("doing") is True
+        assert board.validate_status("backlog") is False
+
+    def test_flow_metrics_empty_board(self, tmp_board):
+        """Flow metrics should work on empty board."""
+        metrics = tmp_board.get_flow_metrics()
+        assert metrics.current_wip == 0
+
+    def test_flow_metrics_with_completed_tasks(self, tmp_board):
+        """Flow metrics should calculate correctly."""
+        tmp_board.add_task(name="Task 1")
+        tmp_board.claim_task("1", "agent-1")
+        tmp_board.complete_task("1", "agent-1")
+
+        metrics = tmp_board.get_flow_metrics()
+        assert metrics.throughput_30d > 0
+        assert metrics.current_wip == 0
+
+    def test_edit_task(self, tmp_board):
+        """Editing a task should update fields."""
+        tmp_board.add_task(name="Original Title", priority="low")
+
+        task = tmp_board.find_task("1")
+        task.priority = "high"
+        task.tags = ["urgent"]
+        task.updated = datetime.now(UTC).isoformat()
+        tmp_board.save_task(task)
+        tmp_board._log_activity("edit", "1", "", "fields updated")
+
+        updated = tmp_board.find_task("1")
+        assert updated.name == "Original Title"
+        assert updated.priority == "high"
+        assert "urgent" in updated.tags
+
+
 from datetime import datetime, timedelta, UTC

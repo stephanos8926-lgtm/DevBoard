@@ -1,0 +1,102 @@
+{
+  "name": "DevBoard",
+  "version": "0.1.0",
+  "generated": "2026-06-16T13:24:07.284223+00:00",
+  "generator": "ast-tools-project-v1",
+  "languages": {
+    "markdown": {
+      "files": 18,
+      "lines": 894
+    },
+    "toml": {
+      "files": 1,
+      "lines": 65
+    },
+    "python": {
+      "files": 3,
+      "lines": 1519
+    },
+    "text": {
+      "files": 5,
+      "lines": 22
+    }
+  },
+  "code_languages": {
+    "python": {
+      "files": 3,
+      "lines": 1519
+    }
+  },
+  "config_languages": {
+    "markdown": {
+      "files": 18,
+      "lines": 894
+    },
+    "toml": {
+      "files": 1,
+      "lines": 65
+    },
+    "text": {
+      "files": 5,
+      "lines": 22
+    }
+  },
+  "entry_points": [
+    "devboard.cli:main",
+    "src/devboard/cli.py",
+    "src/devboard/cli.py#if-__name__",
+    "src/devboard/cli.py#main"
+  ],
+  "test_framework": "pytest",
+  "test_files": 1,
+  "test_command": "python3 -m pytest",
+  "modules": [
+    {
+      "path": "src/devboard/__init__.py",
+      "lines": 862,
+      "classes": [
+        "Task",
+        "BoardStats",
+        "FlowStats",
+        "ActivityEvent",
+        "DevBoard"
+      ],
+      "functions": []
+    },
+    {
+      "path": "src/devboard/cli.py",
+      "lines": 439,
+      "classes": [],
+      "functions": [
+        "get_board",
+        "main",
+        "init",
+        "cmd_status",
+        "add",
+        "list_tasks",
+        "show",
+        "pick",
+        "claim",
+        "complete",
+        "move",
+        "log",
+        "agent_name",
+        "board_summary"
+      ]
+    },
+    {
+      "path": "tests/test_devboard.py",
+      "lines": 218,
+      "classes": [
+        "TestTask",
+        "TestDevBoard"
+      ],
+      "functions": [
+        "tmp_board"
+      ]
+    }
+  ],
+  "indices": {
+    "symbols": "references/symbol_index.json"
+  }
+}

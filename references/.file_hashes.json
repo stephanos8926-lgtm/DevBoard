@@ -1,0 +1,5 @@
+{
+  "src/devboard/__init__.py": "3c8ca0866d90ac6c4aa2887d6c1a7b9b",
+  "src/devboard/cli.py": "790c0042c962347c3a898666b97ab077",
+  "tests/test_devboard.py": "5a655bac60273806199ae16c79a53e13"
+}
