@@ -1,60 +1,90 @@
-# DEVBOARD Structure Documentation
+# DevBoard Structure Documentation
 
 ## Directory Layout
+
 ```
-DevBoard/
-├─ InProgress/                     # Tasks currently being worked on
-│   ├─ NA-0042_fix-tui-streaming   # Prefixed with project + task ID
-│   └─ AT-0007_add-module-imports
-├─ JobStart/                       # Tasks started but not yet in progress
-├─ JobEnd/                         # Completed tasks (archived)
-│   ├─ NA-0001_project-setup
-│   └─ NA-0002_core-architecture
-├─ AllPhases/                      # Master copy of all tasks
-│   ├─ Refactoring/
-│   │   ├─ NA-0001_project-setup
-│   │   ├─ NA-0002_core-architecture
-│   │   └─ NA-0003_tool-registration
-│   ├─ Feature-Work/
-│   │   ├─ NA-0042_fix-tui-streaming
-│   │   └─ NA-0043_search-providers
-│   └─ Bug-Fixes/
-│       ├─ NA-0050_word-wrap-fix
-│       └─ NA-0051_tool-call-display
-├─ README.md                       # Overview and usage instructions
-├─ TEMPLATE.md                     # Task file template
-├─ STRUCTURE.md                    # This documentation file
-└─ MASTER.SCHEDULE.md              # Single source of truth for progress tracking
+project-root/
+├── config.yml          # Board configuration (statuses, WIP limits, etc.)
+├── tasks/              # Task files (one per task, YAML frontmatter + Markdown)
+│   001-fix-login-bug.md
+│   002-add-search.md
+│   003-refactor-auth.md
+├── activity.jsonl      # Append-only activity log
+└── .devboard/          # Internal state (auto-created)
 ```
 
-## Workflow Rules
+## Task Lifecycle
+
+```
+backlog → in-progress → review → done
+   ↑          ↓            ↓
+   └──── blocked ←─────────┘
+```
+
+1. **backlog** — New tasks land here
+2. **in-progress** — Claimed by an agent, actively being worked on
+3. **review** — Implementation complete, awaiting review/merge
+4. **done** — Completed and verified
+5. **blocked** — Waiting on external dependency or unmet task dependency
+
+## Task File Format
+
+Each task is a Markdown file with YAML frontmatter:
+
+```markdown
+---
+id: 1
+title: Fix login bug
+status: backlog
+priority: high
+created: 2026-01-15T10:30:00+00:00
+updated: 2026-01-15T10:30:00+00:00
+project: myapp
+tags:
+  - bug
+  - auth
+depends_on: []
+cos: standard
+---
+
+## Description
+What needs to be done and why.
+
+## Acceptance Criteria
+- [ ] Specific, testable condition
+- [ ] Another condition
+
+## Notes
+Any additional context, links, or constraints.
+```
+
+## Configuration Reference
+
+See `config.yml` for all configurable options:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `statuses` | Ordered list of workflow states | `["backlog", "in-progress", "review", "done"]` |
+| `priorities` | Ordered list of priority levels | `["low", "medium", "high", "critical"]` |
+| `wip_limits` | Max concurrent tasks per status | `{"in-progress": 3, "review": 2}` |
+| `claim_timeout` | How long a claim lasts before expiring | `1h` |
+| `defaults.status` | Default status for new tasks | `backlog` |
+| `defaults.priority` | Default priority for new tasks | `medium` |
+
+## Classes of Service
+
+| Class | SLA | WIP Bypass | Use Case |
+|-------|-----|------------|----------|
+| 🚨 Expedite | 4 hours | Yes | Critical production issues |
+| 📅 Fixed Date | Due date | Yes | Deadline-driven work |
+| 📋 Standard | 48 hours | No | Normal priority work |
+| 💡 Intangible | 1 week | No | Tech debt, refactoring |
+
+## Multi-Agent Coordination Rules
+
 1. **One agent per task** — only one agent works on a task at a time
-2. **Check before starting** — always check `MASTER.SCHEDULE.md` before picking up a new task
-3. **Dependency check** — verify all dependencies are `[x]` before starting a task
-4. **Update on completion** — when moving a task to `JobEnd/`, update `MASTER.SCHEDULE.md`
-5. **No code in DevBoard** — DevBOARD contains only planning artifacts. Actual source code lives in project directories.
-
-## Naming Convention
-- Task files: `[TASK_ID]_[task-name-with-dashes]`
-- Phase folders: `[Phase-Name-With-Dashes]` (under `AllPhases/`)
-- No spaces in file or folder names — use dashes
-- Task IDs are unique across all projects
-
-## Multi-Agent Coordination
-- Before starting any task, check `MASTER.SCHEDULE.md` for:
-  - Is it already `[~]` (in progress by another agent)?
-  - Are all dependencies `[x]` (completed)?
-  - Is the priority appropriate for current goals?
-- When an agent picks up a task:
-  1. Update `Agent:` field in the task file
-  2. Change status from `[ ]` to `[~]` in `MASTER.SCHEDULE.md`
-  3. Copy task to `InProgress/`
-- When an agent completes a task:
-  1. Change status from `[~]` to `[x]` in `MASTER.SCHEDULE.md`
-  2. Move task file to `JobEnd/`
-  3. Commit changes to git
-
-## Git Integration
-- DevBoard is git-tracked
-- Commit message format: `devboard: [TASK_ID] [status] — [brief description]`
-- Example: `devboard: NA-0042 [~] — Lucien starting TUI streaming fix`
+2. **Check before starting** — always run `devboard status` before picking up a task
+3. **Use atomic pick** — `devboard pick --agent <name>` prevents double-claiming
+4. **Respect WIP limits** — don't claim beyond your configured limit
+5. **Release stale claims** — claims expire after the configured timeout
+6. **Update on completion** — run `devboard complete <id>` when done
