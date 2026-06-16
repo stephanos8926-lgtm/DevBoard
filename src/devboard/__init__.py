@@ -416,11 +416,18 @@ class DevBoard:
         return None
 
     def save_task(self, task: Task) -> Path:
-        """Save a task to a file."""
+        """Save a task to a file. Handles renames by removing old file."""
         # Generate filename: 001-task-name.md
         safe_name = re.sub(r"[^a-z0-9]+", "-", task.name.lower()).strip("-")
         filename = f"{task.task_id}_{safe_name}.md"
         path = self.tasks_dir / filename
+
+        # Remove old file if filename changed
+        if task.file_path:
+            old_path = Path(task.file_path)
+            if old_path.exists() and old_path != path:
+                old_path.unlink()
+
         path.write_text(task.to_file_content(), encoding="utf-8")
         task.file_path = str(path)
         return path
