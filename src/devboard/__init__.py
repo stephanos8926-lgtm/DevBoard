@@ -33,6 +33,43 @@ CONFIG_FILE = "config.yml"
 TASKS_DIR = "tasks"
 CLAIM_TIMEOUT_DEFAULT = timedelta(hours=1)
 
+# ─── Classes of Service ────────────────────────────────────────────────────
+# Reference: kanban-md classes of service
+# Each class has a visual indicator and optional SLA (max time in a status).
+
+CLASS_OF_SERVICE = {
+    "expedite": {
+        "label": "🚨 Expedite",
+        "color": "red",
+        "sla_hours": 4,          # Must be completed within 4 hours
+        "description": "Drop everything — critical fix needed now",
+        "wip_bypass": True,      # Expedite tasks bypass WIP limits
+    },
+    "fixed-date": {
+        "label": "📅 Fixed Date",
+        "color": "yellow",
+        "sla_hours": None,       # SLA is the due date itself
+        "description": "Must be done by a specific date",
+        "wip_bypass": False,
+    },
+    "standard": {
+        "label": "📋 Standard",
+        "color": "white",
+        "sla_hours": 48,         # 2-day SLA
+        "description": "Normal priority work",
+        "wip_bypass": False,
+    },
+    "intangible": {
+        "label": "💡 Intangible",
+        "color": "blue",
+        "sla_hours": 168,        # 1-week SLA
+        "description": "Tech debt, refactoring, nice-to-have",
+        "wip_bypass": False,
+    },
+}
+
+DEFAULT_CLASS = "standard"
+
 # ─── Data Models ───────────────────────────────────────────────────────────
 
 @dataclass
@@ -55,6 +92,7 @@ class Task:
     claimed_at: str = ""
     dependencies: list[str] = field(default_factory=list)
     project: str = ""
+    cos: str = "standard"  # class of service: expedite, fixed-date, standard, intangible
     tags: list[str] = field(default_factory=list)
     due: str = ""
     body: str = ""
@@ -127,6 +165,8 @@ class Task:
             data["depends_on"] = self.dependencies
         if self.project:
             data["project"] = self.project
+        if self.cos and self.cos != DEFAULT_CLASS:
+            data["cos"] = self.cos
         if self.tags:
             data["tags"] = self.tags
         if self.due:
@@ -170,6 +210,7 @@ class Task:
             claimed_at=data.get("claimed_at", ""),
             dependencies=data.get("depends_on", []) or [],
             project=data.get("project", ""),
+            cos=data.get("cos", "standard"),
             tags=data.get("tags", []) or [],
             due=data.get("due", ""),
             body=body,
@@ -189,6 +230,30 @@ class BoardStats:
     by_project: dict[str, int] = field(default_factory=dict)
     by_priority: dict[str, int] = field(default_factory=dict)
     by_agent: dict[str, int] = field(default_factory=dict)
+    by_cos: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass
+class FlowStats:
+    """Flow metrics for a DevBoard (throughput, lead time, cycle time).
+
+    Reference: kanban flow metrics + Theory of Constraints
+    - throughput: tasks completed per time period
+    - lead time: creation → completion (total time in system)
+    - cycle time: start → completion (active work time)
+    - wip: current work in progress
+    - littles_law: throughput * lead_time ≈ wip
+    """
+    throughput_7d: float = 0.0      # tasks completed in last 7 days
+    throughput_30d: float = 0.0     # tasks completed in last 30 days
+    avg_lead_time_hours: float = 0.0
+    avg_cycle_time_hours: float = 0.0
+    median_lead_time_hours: float = 0.0
+    median_cycle_time_hours: float = 0.0
+    current_wip: int = 0
+    littles_law_wip: float = 0.0    # predicted WIP from throughput * lead_time
+    sla_breaches: int = 0           # count of tasks past SLA
+    sla_compliance_pct: float = 100.0
 
 
 @dataclass
@@ -343,14 +408,16 @@ class DevBoard:
         if not self._deps_satisfied(task):
             return None
 
-        # Check WIP limits
+        # Check WIP limits (expedite tasks bypass WIP limits)
         config = self.load_config()
         wip_limits = config.get("wip_limits", {})
-        current_ip = sum(1 for t in self.load_tasks() if t.status == "in-progress" and t.claimed_by == agent)
-        agent_limit = wip_limits.get("in-progress", 0)
-        if agent_limit > 0 and current_ip >= agent_limit:
-            logger.info("Agent %s at WIP limit (%d/%d)", agent, current_ip, agent_limit)
-            return None
+        cos_config = CLASS_OF_SERVICE.get(task.cos, CLASS_OF_SERVICE[DEFAULT_CLASS])
+        if not cos_config.get("wip_bypass", False):
+            current_ip = sum(1 for t in self.load_tasks() if t.status == "in-progress" and t.claimed_by == agent)
+            agent_limit = wip_limits.get("in-progress", 0)
+            if agent_limit > 0 and current_ip >= agent_limit:
+                logger.info("Agent %s at WIP limit (%d/%d)", agent, current_ip, agent_limit)
+                return None
 
         # Claim the task
         now = datetime.now(UTC)
@@ -454,7 +521,8 @@ class DevBoard:
 
     def add_task(self, name: str, phase: str = "", priority: str = "medium",
                  description: str = "", project: str = "", agent: str = "Unassigned",
-                 dependencies: Optional[list[str]] = None, tags: Optional[list[str]] = None) -> Task:
+                 dependencies: Optional[list[str]] = None, tags: Optional[list[str]] = None,
+                 cos: str = DEFAULT_CLASS, due: str = "") -> Task:
         """Add a new task to the board."""
         task_id = str(self.next_id())
         task = Task(
@@ -466,7 +534,9 @@ class DevBoard:
             agent=agent,
             dependencies=dependencies or [],
             tags=tags or [],
+            cos=cos,
             body=description,
+            due=due,
         )
         self.save_task(task)
         self._log_activity("create", task_id, agent)
@@ -532,6 +602,95 @@ class DevBoard:
             stats.by_priority[task.priority] = stats.by_priority.get(task.priority, 0) + 1
             if task.agent and task.agent != "Unassigned":
                 stats.by_agent[task.agent] = stats.by_agent.get(task.agent, 0) + 1
+            if task.cos:
+                stats.by_cos[task.cos] = stats.by_cos.get(task.cos, 0) + 1
+
+        return stats
+
+    # ── Flow Metrics ──────────────────────────────────────────────────────────
+
+    def get_flow_metrics(self, window_days: int = 30) -> FlowStats:
+        """Calculate flow metrics for the board.
+
+        Reference: Actionable Agile / kanban flow metrics
+        - Throughput: completed per day
+        - Lead time: created → done (hours)
+        - Cycle time: started → done (hours)
+        - SLA compliance: % of tasks within class-of-service SLA
+        """
+        import statistics
+
+        tasks = self.load_tasks()
+        stats = FlowStats()
+        now = datetime.now(UTC)
+
+        # Current WIP
+        stats.current_wip = sum(1 for t in tasks if t.status == "in-progress")
+
+        # Completed tasks in window
+        completed_tasks = []
+        for t in tasks:
+            if not t.completed or t.status != "done":
+                continue
+            try:
+                completed_at = datetime.fromisoformat(t.completed)
+                age_days = (now - completed_at).total_seconds() / 86400
+                if age_days <= window_days:
+                    completed_tasks.append((t, completed_at))
+            except (ValueError, TypeError):
+                continue
+
+        # Throughput
+        cutoff_7d = now - timedelta(days=7)
+        cutoff_30d = now - timedelta(days=30)
+        count_7d = sum(1 for _, ca in completed_tasks if ca >= cutoff_7d)
+        count_30d = sum(1 for _, ca in completed_tasks if ca >= cutoff_30d)
+        stats.throughput_7d = round(count_7d / 7, 2)
+        stats.throughput_30d = round(count_30d / 30, 2)
+
+        # Lead time and cycle time
+        lead_times = []
+        cycle_times = []
+        sla_breaches = 0
+        sla_total = 0
+
+        for t, completed_at in completed_tasks:
+            try:
+                created_at = datetime.fromisoformat(t.created) if t.created else None
+                started_at = datetime.fromisoformat(t.started) if t.started else None
+
+                if created_at:
+                    lt_hours = (completed_at - created_at).total_seconds() / 3600
+                    lead_times.append(lt_hours)
+
+                    # SLA check
+                    sla_total += 1
+                    cos_cfg = CLASS_OF_SERVICE.get(t.cos, CLASS_OF_SERVICE[DEFAULT_CLASS])
+                    sla_hours = cos_cfg.get("sla_hours")
+                    if sla_hours and lt_hours > sla_hours:
+                        sla_breaches += 1
+
+                if started_at:
+                    ct_hours = (completed_at - started_at).total_seconds() / 3600
+                    cycle_times.append(ct_hours)
+            except (ValueError, TypeError):
+                continue
+
+        if lead_times:
+            stats.avg_lead_time_hours = round(statistics.mean(lead_times), 1)
+            stats.median_lead_time_hours = round(statistics.median(lead_times), 1)
+        if cycle_times:
+            stats.avg_cycle_time_hours = round(statistics.mean(cycle_times), 1)
+            stats.median_cycle_time_hours = round(statistics.median(cycle_times), 1)
+
+        # Little's Law: predicted WIP = throughput * lead_time
+        if stats.avg_lead_time_hours > 0 and stats.throughput_30d > 0:
+            daily_throughput = stats.throughput_30d
+            stats.littles_law_wip = round(daily_throughput * (stats.avg_lead_time_hours / 24), 1)
+
+        stats.sla_breaches = sla_breaches
+        if sla_total > 0:
+            stats.sla_compliance_pct = round((sla_total - sla_breaches) / sla_total * 100, 1)
 
         return stats
 
