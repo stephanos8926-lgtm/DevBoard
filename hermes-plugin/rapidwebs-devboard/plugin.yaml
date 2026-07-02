@@ -1,0 +1,6 @@
+name: rapidwebs-devboard
+version: "1.1.0"
+description: "Multi-agent shared task board. Create, claim, complete, and track tasks across agents. Integrates with __TASKS.md file-based kanban."
+hooks:
+  - on_session_start
+  - on_session_end
